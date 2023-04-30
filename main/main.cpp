@@ -9,6 +9,7 @@
 #define SCL_PIN 8
 #define I2C_MASTER_PORT 0
 #define ERIS_TAG "ERIS"
+#define MIN_M_PARACHUTE_OPEN 1
 
 extern "C" {
     void app_main(void);
@@ -48,14 +49,22 @@ void app_main(void)
    double heightCurr = 0.0;
    const double heightDelta = 0.05;
    const double heightParachute = 1.10;
+   bool canOpenParachute = false;
 
    while (true) {
       DriverDPS310::Measure measure;
 
       driverDPS310->execMeasurement(&measure);
 
-      heightCurr = heightZero - (measure.pressMeasure.pressComp/ 100 / press1m);
-      if (heightLast == 0.0) heightLast = heightCurr;
+      heightCurr = heightZero - (measure.pressMeasure.pressComp / 100 / press1m);
+
+      if (heightCurr >= MIN_M_PARACHUTE_OPEN) {
+         canOpenParachute = true;
+      }
+
+      if (heightLast == 0.0) {
+         heightLast = heightCurr;
+      }
 
       if (heightCurr >= heightParachute) {
          ESP_LOGI(ERIS_TAG, "Height reached");
@@ -74,7 +83,7 @@ void app_main(void)
 
       ESP_LOGI(ERIS_TAG, "Height: %f m, pressure: %f", heightCurr, measure.pressMeasure.pressComp);
 
-      if (drop && heightCurr < heightParachute) {
+      if (canOpenParachute && drop && heightCurr < heightParachute) {
          ESP_LOGI(ERIS_TAG, "Parachute opening!!");
       }
 
